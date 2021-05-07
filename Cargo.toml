@@ -1,5 +1,5 @@
 [package]
-name = "bfc"
+name = "bif"
 version = "0.1.0"
 authors = ["Luke Leppan <lukelepp@gmail.com>"]
 edition = "2018"
