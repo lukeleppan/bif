@@ -1,1 +1,1 @@
-# bfc
+# bif - The Rusty Brainfuck Interpreter
