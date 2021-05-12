@@ -22,8 +22,14 @@ fn main() {
     loop {
         if code[pos] == 43 {
             tape[ptr] = tape[ptr] + 1;
+            if tape[ptr] == 256 {
+              tape[ptr] = 0;
+            }
         } else if code[pos] == 45 {
             tape[ptr] = tape[ptr] - 1;
+            if tape[ptr] == -1 {
+              tape[ptr] = 255;
+            }
         } else if code[pos] == 62 {
             ptr = ptr + 1;
             if ptr > tape.len() - 1 {
