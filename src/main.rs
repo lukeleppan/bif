@@ -1,101 +1,98 @@
-use std::collections::HashMap;
-use std::env;
-use std::fs;
-use std::io::{self, Write};
+use clap::Parser;
+use std::io;
+use std::path::PathBuf;
+use std::{fs, process};
 
 // [43, 45, 62, 60, 91, 93, 44, 46]
 //  +   -   >   <   [   ]   ,   .
 
+#[derive(Parser)]
+#[command(name = "bif")]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Brainfuck Source File
+    #[arg(name="source file", value_parser = clap::value_parser!(PathBuf), required=true, )]
+    file: PathBuf,
+
+    /// Tape Capacity
+    #[arg(short = 'c', long = "capacity", default_value = "30000")]
+    tape_cap: Option<usize>,
+}
+
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    println!("Interpreting Code...");
+    let cli = Cli::parse();
 
-    let code: Vec<u8> = comment_removal(fs::read(&args[1]).expect("Error failed to read file."));
-    let bracket_map: HashMap<usize, usize> = gen_bracket_map(&code);
+    let code = read_file(&cli.file);
+    let mut code_ptr: usize = 0;
 
-    let mut ptr: usize = 0;
-    let mut tape: Vec<i128> = Vec::new();
-    tape.push(0);
+    let mut tape: Vec<u8> = Vec::new();
+    let mut tape_ptr: usize = 0;
 
-    let mut pos: usize = 0;
+    let mut bracket_stack: Vec<usize> = Vec::new();
+
+    let cap = match cli.tape_cap {
+        Some(cap) => cap,
+        None => 30000,
+    };
+
+    for _ in 0..cap {
+        tape.push(0);
+    }
 
     loop {
-        if code[pos] == 43 {
-            tape[ptr] = tape[ptr] + 1;
-            if tape[ptr] == 256 {
-              tape[ptr] = 0;
-            }
-        } else if code[pos] == 45 {
-            tape[ptr] = tape[ptr] - 1;
-            if tape[ptr] == -1 {
-              tape[ptr] = 255;
-            }
-        } else if code[pos] == 62 {
-            ptr = ptr + 1;
-            if ptr > tape.len() - 1 {
-                tape.push(0);
-            }
-        } else if code[pos] == 60 {
-            ptr = ptr - 1;
-        } else if code[pos] == 46 {
-            print!("{}", tape[ptr] as u8 as char);
-            io::stdout().flush().unwrap();
-        } else if code[pos] == 44 {
-            let mut tmp = String::new();
-            io::stdin()
-                .read_line(&mut tmp)
-                .expect("Error: String Stuff");
-            tape[ptr] = tmp.as_bytes()[0] as i128;
-        } else if code[pos] == 91 && tape[ptr] == 0 {
-            pos = bracket_map
-                .get(&pos)
-                .copied()
-                .expect("Error: Invalid Brain Fuck");
-        } else if code[pos] == 93 && tape[ptr] != 0 {
-            pos = bracket_map
-                .get(&pos)
-                .copied()
-                .expect("Error: Invalid Brain Fuck");
-        }
-        if pos == code.len() - 1 {
+        if code_ptr == code.len() - 1 || code.len() == 0 {
             break;
         }
-        pos += 1;
-    }
-}
-
-fn comment_removal(chars: Vec<u8>) -> Vec<u8> {
-    let commands: Vec<u8> = vec![43, 45, 62, 60, 91, 93, 44, 46];
-    let mut tmp: Vec<u8> = Vec::new();
-    for c in chars {
-        for cmd in &commands {
-            if cmd == &c {
-                tmp.push(c);
-                break;
+        match code[code_ptr] {
+            43 => tape[tape_ptr] = tape[tape_ptr].wrapping_add(1),
+            45 => tape[tape_ptr] = tape[tape_ptr].wrapping_sub(1),
+            62 => {
+                tape_ptr += 1;
+                if tape_ptr == tape.len() {
+                    tape_ptr = 0;
+                }
             }
+            60 => {
+                if tape_ptr == 0 {
+                    tape_ptr = tape.len() - 1;
+                }
+                tape_ptr -= 1;
+            }
+            46 => print!("{}", tape[tape_ptr] as char),
+            44 => {
+                let mut input = String::new();
+                io::stdin().read_line(&mut input).unwrap();
+                tape[tape_ptr] = input.as_bytes()[0];
+            }
+            91 => bracket_stack.push(code_ptr),
+            93 => {
+                if tape[tape_ptr] != 0 {
+                    code_ptr = bracket_stack[bracket_stack.len() - 1];
+                } else {
+                    bracket_stack.pop();
+                }
+            }
+            _ => (),
         }
-    }
 
-    return tmp;
+        code_ptr += 1;
+    }
 }
 
-fn gen_bracket_map(chars: &Vec<u8>) -> HashMap<usize, usize> {
-    let mut map: HashMap<usize, usize> = HashMap::new();
-    let mut left_positions: Vec<usize> = Vec::new();
+fn read_file(file: &PathBuf) -> Vec<u8> {
+    return match fs::read(file) {
+        Ok(code_buf) => code_buf,
+        Err(err) => {
+            let error_kind = err.kind();
 
-    let mut position: usize = 0;
-    for c in chars {
-        if c == &91 {
-            left_positions.push(position);
-        } else if c == &93 {
-            let left = left_positions
-                .pop()
-                .expect("Error: Invalid Brain Fuck Code");
-            map.insert(left, position);
-            map.insert(position, left);
+            if error_kind == io::ErrorKind::NotFound {
+                println!("error: file not found: {:?}", file);
+            } else if error_kind == io::ErrorKind::PermissionDenied {
+                println!("error: permission denied reading file: {:?}", file);
+            } else {
+                println!("error: unknown error reading file: {:?}", file);
+            }
+            process::exit(1);
         }
-
-        position += 1;
-    }
-    return map;
+    };
 }
