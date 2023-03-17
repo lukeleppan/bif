@@ -8,6 +8,8 @@ homepage = "https://github.com/lukeleppan/bif"
 repository = "https://github.com/lukeleppan/bif"
 readme = "README.md"
 license-file = "LICENSE"
+keywords = ["brainfuck", "interpreter"]
+categories = ["command-line-utilities", "compilers"]
 
 [dependencies]
 clap = { version = "4.1.8", features = ["derive"] }
