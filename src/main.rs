@@ -14,6 +14,10 @@ struct Cli {
     #[arg(name="source file", value_parser = clap::value_parser!(PathBuf), required=true, )]
     file: PathBuf,
 
+    /// Input to the program
+    #[arg(short = 'i', long = "input", default_value = "")]
+    input: Option<String>,
+
     /// Tape Capacity
     #[arg(short = 'c', long = "capacity", default_value = "30000")]
     tape_cap: Option<usize>,
@@ -33,6 +37,12 @@ fn main() {
     let cap = match cli.tape_cap {
         Some(cap) => cap,
         None => 30000,
+    };
+
+    let mut input_ptr: usize = 0;
+    let input = match cli.input {
+        Some(input) => input,
+        None => String::new(),
     };
 
     for _ in 0..cap {
@@ -60,9 +70,21 @@ fn main() {
             }
             46 => print!("{}", tape[tape_ptr] as char),
             44 => {
-                let mut input = String::new();
-                io::stdin().read_line(&mut input).unwrap();
-                tape[tape_ptr] = input.as_bytes()[0];
+                let mut next_in = String::new();
+                if input.len() == 0 {
+                    next_in = match io::stdin().read_line(&mut next_in) {
+                        Ok(_) => next_in,
+                        Err(_) => String::new(),
+                    };
+                    tape[tape_ptr] = next_in.as_bytes()[0];
+                } else {
+                    if input_ptr == input.len() {
+                        break;
+                    }
+
+                    tape[tape_ptr] = input.as_bytes()[input_ptr];
+                    input_ptr += 1;
+                }
             }
             91 => bracket_stack.push(code_ptr),
             93 => {
