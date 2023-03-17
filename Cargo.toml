@@ -4,9 +4,10 @@ description = "The Rusty Brainfuck Compiler"
 version = "0.2.0"
 authors = ["Luke Leppan <lukelepp@gmail.com>"]
 edition = "2023"
-
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+homepage = "https://github.com/lukeleppan/bif"
+repository = "https://github.com/lukeleppan/bif"
+readme = "README.md"
+license-file = "LICENSE"
 
 [dependencies]
 clap = { version = "4.1.8", features = ["derive"] }
